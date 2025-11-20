@@ -2,7 +2,6 @@ import { generateObject } from "ai";
 import { Data, Effect } from "effect";
 import type { z } from "zod";
 import { ModelProvider } from "./model.provider";
-import { InvoiceSystemPrompt } from "./schema/invoice";
 
 export class ExtractPdfError extends Data.TaggedError(
   "ExtractPDF/Process/Error"
@@ -31,12 +30,16 @@ export class ExtractPDFService extends Effect.Service<ExtractPDFService>()(
             - Maintain consistent formatting across all extractions
             - Pay attention to line items and calculate totals if needed`;
 
-      const processInline = <T>(pdfBuffer: Buffer, schema: z.ZodType<T>) =>
+      const processInline = <T>(
+        pdfBuffer: Buffer,
+        systemPrompt: string,
+        schema: z.ZodType<T>
+      ) =>
         Effect.tryPromise({
           try: () =>
             generateObject({
               model: models.gemini["2.5-flash"],
-              system: InvoiceSystemPrompt,
+              system: systemPrompt,
               schema,
               messages: [
                 {
