@@ -8,7 +8,7 @@ jobs:
     build-docker:
         runs-on: ubuntu-latest
         env:
-            USERNAME: ${{ vars.DOCKER_USERNAME}}
+            USERNAME: ${{ vars.DOCKERHUB_USERNAME}}
             IMG_NAME: gemini-pdf-extractor
         steps:
             - name: Checkout
@@ -17,7 +17,7 @@ jobs:
               uses: docker/login-action@v3
               with:
                   username: ${{ env.USERNAME }}
-                  password: ${{ secrets.DOCKER_TOKEN }}
+                  password: ${{ secrets.DOCKERHUB_TOKEN }}
             - name: Setup QEMU
               uses: docker/setup-qemu-action@v3
             - name: Setup Docker Buildx
