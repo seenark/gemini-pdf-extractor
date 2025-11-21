@@ -11,6 +11,15 @@ import {
 
 const app = new Elysia();
 
+function debugEnv() {
+  const program = Effect.Do.pipe(
+    Effect.tap(() => Effect.logDebug("env", process.env))
+  );
+  Runtime.runSync(program);
+}
+
+debugEnv();
+
 app
   .use(
     openapi({

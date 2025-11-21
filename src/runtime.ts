@@ -5,7 +5,7 @@ import { ModelProvider } from "./model.provider";
 
 const allLive = Layer.mergeAll(
   ExtractPDFService.Default,
-  Logger.minimumLogLevel(LogLevel.fromLiteral(process.env.LOG_LEVEL || "All")),
+  Logger.minimumLogLevel(LogLevel.fromLiteral(process.env.LOG_LEVEL || "Info")),
   Logger.pretty
 ).pipe(Layer.provideMerge(ModelProvider.Default));
 

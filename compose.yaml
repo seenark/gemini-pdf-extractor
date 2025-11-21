@@ -1,0 +1,12 @@
+services:
+  gemini-pdf-extrator:
+    image: hadesgod/gemini-pdf-extractor
+    container_name: gemini-pdf-extrator
+    ports:
+      - 3000:3000
+    # environment:
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:3000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
