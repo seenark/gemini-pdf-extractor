@@ -1,10 +1,10 @@
 import path from "node:path";
 import { Effect } from "effect";
-import { describe, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import { ExtractPDFService } from "../src/extract-pdf.service";
 import { readFileAndSize } from "../src/helpers";
 import { Runtime } from "../src/runtime";
-import { CargoSchema, CargoSystemPrompt } from "../src/schema/cargo";
+import { CARGO_SYSTEM_PROMPT, CargoSchema } from "../src/schema/cargo";
 
 const files = {
   egat: path.join(__dirname, "Invoice_EGAT.pdf"),
@@ -72,13 +72,13 @@ describe("extract invoice", () => {
   // });
 
   it("should ok with cargo pdf", async () => {
-    const { file } = await readFileAndSize(files.pelng);
+    const { file } = await readFileAndSize(files.cargo2);
 
     const program = Effect.all({
       svc: ExtractPDFService,
     }).pipe(
       Effect.andThen(({ svc }) =>
-        svc.processInline(file, CargoSystemPrompt, CargoSchema)
+        svc.processInline(file, CARGO_SYSTEM_PROMPT, CargoSchema)
       ),
       Effect.tap((data) => Effect.log("data", data)),
       Effect.tapError((error) => Effect.logError("error -->", error.error))
@@ -86,5 +86,61 @@ describe("extract invoice", () => {
 
     const object = await Runtime.runPromise(program);
     console.log({ object });
+
+    // {
+    //    voyage_seller_name: 'PetroChina International (Singapore) Pte. Ltd.',
+    //    voyage_payment_due_date: '2025-09-17',
+    //    voyage_vessel_name: 'CELSIUS GALAPAGOS',
+    //    voyage_load_port: 'Corpus Christi, United States of America',
+    //    voyage_quantity_mmbtu: 3727474,
+    //    voyage_price_usd_per_mmbtu: 12.8111,
+    //    voyage_net_amount_usd: 47753042.16,
+    //    voyage_total_amount_incl_gst: 47753042.16,
+    //    unloading_higher_heating_value: 1031.12,
+    //    quantity_net_delivered: 71121.478,
+    //    survey_fee_before_tax: 19164.75,
+    //    exchange_rate_usd_to_thb: 32.4975,
+    //    customs_clearance_services: [
+    //      {
+    //        description: 'Customs document and off-premises fees',
+    //        final_cost: 3280,
+    //        currency: 'THB',
+    //        reference_no: '2621-642229/28-08-68'
+    //      },
+    //      {
+    //        description: 'Customs Overtime Fee',
+    //        final_cost: 1000,
+    //        currency: 'THB',
+    //        reference_no: '2621-642232/28-08-68'
+    //      },
+    //      {
+    //        description: 'Customs Clearance Fee',
+    //        final_cost: 200,
+    //        currency: 'THB',
+    //        reference_no: '2621-9000144/28-08-68'
+    //      }
+    //    ],
+    //  }
+
+    expect(object.voyage_seller_name.toLowerCase()).eq(
+      "petrochina international (singapore) pte. ltd."
+    );
+    expect(object.voyage_payment_due_date).eq("2025-09-17");
+    expect(object.voyage_vessel_name.toLowerCase()).eq("celsius galapagos");
+    // expect(object.voyage_load_port.toLowerCase()).eq(
+    //   "corpus christi, united states of america"
+    // );
+    expect(object.voyage_load_port.toLowerCase()).contain("corpus christi");
+    expect(object.voyage_quantity_mmbtu).eq(3_727_474);
+    expect(object.voyage_price_usd_per_mmbtu).eq(12.8111);
+    expect(object.voyage_net_amount_usd).eq(47_753_042.16);
+    expect(object.voyage_total_amount_incl_gst).eq(47_753_042.16);
+    expect(object.unloading_higher_heating_value).eq(1031.12);
+    expect(object.quantity_net_delivered).eq(71_121.478);
+    expect(object.survey_fee_before_tax).eq(19_164.75);
+    expect(object.exchange_rate_usd_to_thb).eq(32.4975);
+    expect(
+      object.customs_clearance_services.map((item) => item.final_cost)
+    ).toEqual([3280, 1000, 200]);
   });
 });
