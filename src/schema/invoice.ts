@@ -6,20 +6,20 @@ export const InvoiceSystemPrompt = `
     1. **quantity** - The total quantity/volume/amount of goods or services
        (Look for: ปริมาณ, จำนวน, Quantity, Volume, Units, etc.)
 
-    2. **unitPriceTHBPerMMBTU** - The price per single unit
-       (Look for: ราคาต่อหน่วย, ราคาหน่วยละ, Unit Price, Price/Unit, etc.)
+     2. **unit_price_thb_per_mmbtu** - The unit price in THB per MMBTU
+       (Look for: ราคาต่อหน่วย, ราคาหน่วยละ, Unit Price, Price/Unit, THB/MMBTU, etc.)
 
-    3. **subtotalTHB** - The amount BEFORE VAT (quantity × unit price)
+     3. **subtotal_thb** - The amount BEFORE VAT (quantity × unit price)
        (Look for: จำนวนเงิน, มูลค่าสินค้า, ยอดรวมก่อน VAT, Subtotal, Amount Before Tax, etc.)
 
-    4. **vatTHB** - The VAT/tax amount
+     4. **vat_thb** - The VAT/tax amount
        (Look for: ภาษีมูลค่าเพิ่ม, VAT, Tax Amount, etc.)
 
-    5. **totalTHB** - The GRAND TOTAL (subtotal + VAT)
+     5. **total_thb** - The GRAND TOTAL (subtotal + VAT)
        (Look for: จำนวนเงินรวม, ยอดรวมทั้งสิ้น, Grand Total, Total Amount, Amount Due, etc.)
 
     Extract numbers only (remove commas, currency symbols). All amounts should be in THB.
-    If you find a VAT rate percentage, include it as a decimal in vatRate (e.g., 7% = 0.07).
+    If you find a VAT rate percentage, include it as a decimal in vat_rate (e.g., 7% = 0.07).
 
     nvoice content:
     `;
@@ -36,7 +36,7 @@ export const InvoiceSchema = z.object({
     ),
 
   // ราคาต่อหน่วย - Unit Price
-  unitPriceTHBPerMMBTU: z
+  unit_price_thb_per_mmbtu: z
     .number()
     .nonnegative()
     .describe(
@@ -46,7 +46,7 @@ export const InvoiceSchema = z.object({
     ),
 
   // จำนวนเงิน - Subtotal (before VAT)
-  subtotalTHB: z
+  subtotal_thb: z
     .number()
     .nonnegative()
     .describe(
@@ -56,7 +56,7 @@ export const InvoiceSchema = z.object({
     ),
 
   // ภาษีมูลค่าเพิ่ม - VAT Amount
-  vatTHB: z
+  vat_thb: z
     .number()
     .nonnegative()
     .describe(
@@ -66,7 +66,7 @@ export const InvoiceSchema = z.object({
     ),
 
   // จำนวนเงินรวม - Grand Total
-  totalTHB: z
+  total_thb: z
     .number()
     .nonnegative()
     .describe(
@@ -82,7 +82,7 @@ export const InvoiceSchema = z.object({
     .optional()
     .describe("Currency code | รหัสสกุลเงิน (e.g., THB, USD, EUR)"),
 
-  vatRate: z
+  vat_rate: z
     .number()
     .min(0)
     .max(1)
@@ -96,36 +96,36 @@ export const InvoiceSchema = z.object({
 });
 /*
   .superRefine((val, ctx) => {
-    // Consistency check: subtotal ≈ quantity * unitPrice
+    // Consistency check: subtotal ≈ quantity * unit_price
     if (
       val.quantity !== undefined &&
-      val.unitPriceTHBPerMMBTU !== undefined &&
-      val.subtotalTHB !== undefined
+      val.unit_price_thb_per_mmbtu !== undefined &&
+      val.subtotal_thb !== undefined
     ) {
-      const expected = val.quantity * val.unitPriceTHBPerMMBTU;
-      const diff = Math.abs(expected - val.subtotalTHB);
+      const expected = val.quantity * val.unit_price_thb_per_mmbtu;
+      const diff = Math.abs(expected - val.subtotal_thb);
       // Allow tolerance for rounding (adjust as needed)
       if (diff > 2) {
         ctx.addIssue({
           code: "custom",
-          path: ["subtotalTHB"],
-          message: `Subtotal does not match quantity × unitPrice (difference ≈ $${diff.toFixed(2)}$$ {val.currency})`,
+          path: ["subtotal_thb"],
+          message: `Subtotal does not match quantity × unit_price (difference ≈ $${diff.toFixed(2)}$$ {val.currency})`,
         });
       }
     }
 
     // Consistency check: total ≈ subtotal + VAT
     if (
-      val.subtotalTHB !== undefined &&
-      val.vatTHB !== undefined &&
-      val.totalTHB !== undefined
+      val.subtotal_thb !== undefined &&
+      val.vat_thb !== undefined &&
+      val.total_thb !== undefined
     ) {
-      const expected = val.subtotalTHB + val.vatTHB;
-      const diff = Math.abs(expected - val.totalTHB);
+      const expected = val.subtotal_thb + val.vat_thb;
+      const diff = Math.abs(expected - val.total_thb);
       if (diff > 1) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          path: ["totalTHB"],
+          path: ["total_thb"],
           message: `Total does not equal subtotal + VAT (difference ≈ $${diff.toFixed(2)}$$ {val.currency})`,
         });
       }

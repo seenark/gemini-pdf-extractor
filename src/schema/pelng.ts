@@ -71,7 +71,7 @@ END OF INSTRUCTIONS.
 
 export const PELNGInvoiceSchema = z.object({
   // ค่าบริการสถานี = รวมจำนวนเงินค่าบริการส่วนต้นทุนคงที่ + ค่าบริการต้นทุนผันแปร (ยอดรวมส่วนบริการ)
-  stationServiceFeeTHB: z
+  station_service_fee_thb: z
     .number()
     .nonnegative()
     .describe(
@@ -80,19 +80,19 @@ export const PELNGInvoiceSchema = z.object({
     ),
 
   // Fixed-Cost Service (ค่าบริการส่วนต้นทุนคงที่)
-  fixedCostQuantityMMBTU: z
+  fixed_cost_quantity_mmbtu: z
     .number()
     .nonnegative()
     .describe(
       "Fixed-Cost Service Quantity (MMBTU) | ปริมาณค่าบริการส่วนต้นทุนคงที่ (หน่วย: MMBTU/ล้านBTU)"
     ),
-  fixedCostUnitPriceTHBPerMMBTU: z
+  fixed_cost_unit_price_thb_per_mmbtu: z
     .number()
     .nonnegative()
     .describe(
       "Fixed-Cost Service Unit Price (THB/MMBTU) | ราคาต่อหน่วยค่าบริการส่วนต้นทุนคงที่ (บาท/MMBTU)"
     ),
-  fixedCostAmountTHB: z
+  fixed_cost_amount_thb: z
     .number()
     .nonnegative()
     .describe(
@@ -100,19 +100,19 @@ export const PELNGInvoiceSchema = z.object({
     ),
 
   // Variable-Cost Service (ค่าบริการส่วนต้นทุนผันแปร)
-  variableCostQuantityMMBTU: z
+  variable_cost_quantity_mmbtu: z
     .number()
     .nonnegative()
     .describe(
       "Variable-Cost Service Quantity (MMBTU) | ปริมาณค่าบริการส่วนต้นทุนผันแปร (หน่วย: MMBTU/ล้านBTU)"
     ),
-  variableCostUnitPriceTHBPerMMBTU: z
+  variable_cost_unit_price_thb_per_mmbtu: z
     .number()
     .nonnegative()
     .describe(
       "Variable-Cost Service Unit Price (THB/MMBTU) | ราคาต่อหน่วยค่าบริการส่วนต้นทุนผันแปร (บาท/MMBTU)"
     ),
-  variableCostAmountTHB: z
+  variable_cost_amount_thb: z
     .number()
     .nonnegative()
     .describe(
@@ -120,13 +120,13 @@ export const PELNGInvoiceSchema = z.object({
     ),
 
   // มูลค่า RLNG รวม
-  rlngTotalValueTHB: z
+  rlng_total_value_thb: z
     .number()
     .nonnegative()
     .describe("RLNG Total Value (THB) | มูลค่า RLNG รวม / มูลค่ารวม RLNG (บาท)"),
 
   // มูลค่ารวม (ยอดรวมทั้งสิ้นของเอกสาร หากมี)
-  totalAmountTHB: z
+  total_amount_thb: z
     .number()
     .nonnegative()
     .describe(
