@@ -8,7 +8,7 @@ RUN bun install --frozen-lockfile
 
 FROM deps AS build
 COPY . .
-RUN bun run build
+RUN bun build.ts
 
 FROM base AS final
 COPY --from=build /app/dist dist
