@@ -58,6 +58,44 @@
 
 //         expect(result.total_regas_value).toEqual(5_447_307_387.79);
 //     });
+
+//     // Terminal Cost
+
+//     it("should extract terminal cost data", async () => {
+//         const { file } = await readFileAndSize(files.ptt.lng.regasSendout);
+//         const program = Effect.all({
+//             svc: ExtractPDFService,
+//         }).pipe(
+//             Effect.andThen(({ svc }) =>
+//                 svc.processInline(
+//                     file,
+//                     pttLngSchemaAndPrompt.terminalCost.systemPrompt,
+//                     pttLngSchemaAndPrompt.terminalCost.schema
+//                 )
+//             ),
+//             Effect.andThen((results) => {
+//                 let tariff_ld = 0;
+//                 let tariff_lc = 0;
+//                 if (Array.isArray(results)) {
+//                     for (const item of results) {
+//                         tariff_ld += item?.fixed_cost_baht ?? 0;
+//                         tariff_lc += item?.variable_cost_baht ?? 0;
+//                     }
+//                 }
+//                 return {
+//                     tariff_ld,
+//                     tariff_lc,
+//                 };
+//             }),
+//             Effect.tap((data) => Effect.log("data", data)),
+//             Effect.tapError((error) => Effect.logError("error -->", error.error))
+//         );
+//         const result = await Runtime.runPromise(program);
+
+//         expect(result.tariff_ld).toEqual(863_268_358.4);
+//         expect(result.tariff_lc).toEqual(13_840_273.85);
+//     });
 // });
+
 
 export { }
