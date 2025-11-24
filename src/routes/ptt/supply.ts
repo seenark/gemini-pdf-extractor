@@ -10,6 +10,7 @@ import { arthitGasPlatformSchemaAndPrompt } from "../../schema/ptt/arthit";
 import { B8InvoiceAndHeatSchemaAndSystemPrompt } from "../../schema/ptt/b8-invoice-and-heat";
 import { invoiceAndHeatSchemaAndPrompt } from "../../schema/ptt/invoice-register-and-heat";
 import { jdaSchemaAndPrompt } from "../../schema/ptt/jda-a18-b17";
+import { pttSupplySchemaAndPrompt as PttSupplySchemaAndPromptSouthern } from "../../schema/ptt/ptt-supply";
 import { pttSupplySchemaAndPrompt } from "../../schema/ptt/supply";
 import { supplyClassification } from "../../schema/ptt/supply.classification";
 
@@ -93,6 +94,54 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
               buf,
               arthitGasPlatformSchemaAndPrompt.statement.systemPrompt,
               arthitGasPlatformSchemaAndPrompt.statement.schema
+            );
+          }
+
+          if (documentType === "yadana" && confidence > 90) {
+            return yield* svc
+              .processInline(
+                buf,
+                PttSupplySchemaAndPromptSouthern.yadana.systemPrompt,
+                PttSupplySchemaAndPromptSouthern.yadana.schema
+              )
+              .pipe(
+                Effect.andThen((data) => ({
+                  ...data,
+                  sum: data.moge_quantity_mmbtu + data.pttepi_quantity_mmbtu,
+                }))
+              );
+          }
+
+          if (documentType === "yetagun" && confidence > 90) {
+            return yield* svc.processInline(
+              buf,
+              PttSupplySchemaAndPromptSouthern.yetagun.systemPrompt,
+              PttSupplySchemaAndPromptSouthern.yetagun.schema
+            );
+          }
+
+          if (documentType === "zawtika" && confidence > 90) {
+            return yield* svc
+              .processInline(
+                buf,
+                PttSupplySchemaAndPromptSouthern.zawtika.systemPrompt,
+                PttSupplySchemaAndPromptSouthern.zawtika.schema
+              )
+              .pipe(
+                Effect.andThen((data) => ({
+                  ...data,
+                  sum_quantity:
+                    data.moge_quantity_mmbtu + data.pttepi_quantity_mmbtu,
+                  sum_usd: data.moge_payment_usd + data.pttepi_payment_usd,
+                }))
+              );
+          }
+
+          if (documentType === "jda" && confidence > 90) {
+            return yield* svc.processInline(
+              buf,
+              jdaSchemaAndPrompt.systemPrompt,
+              jdaSchemaAndPrompt.schema
             );
           }
 

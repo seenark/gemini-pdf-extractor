@@ -3,9 +3,13 @@ import { z } from "zod";
 // --- I. Zod Schema Generation ---
 
 const YadanaSchema = z.object({
-    overall_payment_due_usd: z.number().describe('OVERALL PAYMENT DUE BY PTT TO THE SELLERS (I+II) in USD.'),
-    moge_quantity_mmbtu: z.number().describe("MOGE's quantity of gas in MMBTU."),
-    pttepi_quantity_mmbtu: z.number().describe("PTTEPI's quantity of gas in MMBTU."),
+  overall_payment_due_usd: z
+    .number()
+    .describe("OVERALL PAYMENT DUE BY PTT TO THE SELLERS (I+II) in USD."),
+  moge_quantity_mmbtu: z.number().describe("MOGE's quantity of gas in MMBTU."),
+  pttepi_quantity_mmbtu: z
+    .number()
+    .describe("PTTEPI's quantity of gas in MMBTU."),
 });
 const yadanaSystemPrompt = `You are an expert data extraction model specializing in financial reports based on the Export Gas Sale Agreement (EGSA). Your task is to extract the overall payment amount and the respective MMBTU quantities attributable to the two sellers (MOGE and PTTEPI).
 
@@ -36,8 +40,18 @@ Example JSON structure:
 `;
 
 const YetagunSummarySchema = z.object({
-    sub_total_mmbtu: z.number().default(0).describe('SUB-TOTAL (MMBTU) for quantity to be paid at contract price. Defaults to 0 if not found.'),
-    overall_payment_due_usd: z.number().default(0).describe('OVERALL PAYMENT DUE BY PTT TO THE SELLERS in US$. Defaults to 0 if not found.'),
+  sub_total_mmbtu: z
+    .number()
+    .default(0)
+    .describe(
+      "SUB-TOTAL (MMBTU) for quantity to be paid at contract price. Defaults to 0 if not found."
+    ),
+  overall_payment_due_usd: z
+    .number()
+    .default(0)
+    .describe(
+      "OVERALL PAYMENT DUE BY PTT TO THE SELLERS in US$. Defaults to 0 if not found."
+    ),
 });
 
 const yetagunSystemPrompt = `You are an expert data extraction model specializing in financial reports based on the Yetagun Gas Sales Agreement. Your task is to extract two specific financial totals from the provided document.
@@ -65,12 +79,27 @@ Example JSON structure:
 }
 `;
 
-
 const ZawtikaSplitSchema = z.object({
-    moge_quantity_mmbtu: z.number().default(0).describe("MOGE's quantity of gas in MMBTU. Defaults to 0 if not found."),
-    moge_payment_usd: z.number().default(0).describe("MOGE's share of the payment in USD. Defaults to 0 if not found."),
-    pttepi_quantity_mmbtu: z.number().default(0).describe("PTTEPI's quantity of gas in MMBTU. Defaults to 0 if not found."),
-    pttepi_payment_usd: z.number().default(0).describe("PTTEPI's share of the payment in USD. Defaults to 0 if not found."),
+  moge_quantity_mmbtu: z
+    .number()
+    .default(0)
+    .describe("MOGE's quantity of gas in MMBTU. Defaults to 0 if not found."),
+  moge_payment_usd: z
+    .number()
+    .default(0)
+    .describe(
+      "MOGE's share of the payment in USD. Defaults to 0 if not found."
+    ),
+  pttepi_quantity_mmbtu: z
+    .number()
+    .default(0)
+    .describe("PTTEPI's quantity of gas in MMBTU. Defaults to 0 if not found."),
+  pttepi_payment_usd: z
+    .number()
+    .default(0)
+    .describe(
+      "PTTEPI's share of the payment in USD. Defaults to 0 if not found."
+    ),
 });
 export type ZawtikaSplit = z.infer<typeof ZawtikaSplitSchema>;
 const zawtikaSystemPrompt = `You are an expert data extraction model specializing in financial reports based on the Export Gas Sales Agreement. Your task is to extract four specific fields detailing the financial split between the two gas suppliers, MOGE and PTTEPI.
@@ -104,20 +133,19 @@ Example JSON structure:
 }
 `;
 
-
 export type Yadana = z.infer<typeof YadanaSchema>;
 
 export const pttSupplySchemaAndPrompt = {
-    yadana: {
-        schema: YadanaSchema,
-        systemPrompt: yadanaSystemPrompt,
+  yadana: {
+    schema: YadanaSchema,
+    systemPrompt: yadanaSystemPrompt,
   },
-    yetagun: {
-        schema: YetagunSummarySchema,
-        systemPrompt: yetagunSystemPrompt,
-    },
-    zawtika: {
-        schema: ZawtikaSplitSchema,
-        systemPrompt: zawtikaSystemPrompt,
-    },
+  yetagun: {
+    schema: YetagunSummarySchema,
+    systemPrompt: yetagunSystemPrompt,
+  },
+  zawtika: {
+    schema: ZawtikaSplitSchema,
+    systemPrompt: zawtikaSystemPrompt,
+  },
 };
