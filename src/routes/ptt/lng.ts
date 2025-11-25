@@ -94,6 +94,7 @@ export const lngRoutes = new Elysia().group("/lng", (c) =>
               }
             }
             return {
+              results,
               tariff_ld,
               tariff_lc,
             };

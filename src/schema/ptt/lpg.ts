@@ -18,7 +18,6 @@ const systemPrompt = `You are an expert data extraction model. Your task is to e
 
 ### Data Location and Instructions:
 * **fuel_ratio**:
-    * **Source Page**: Page 1.
     * **Location Hint**: Look for the label "**สัดส่วน LPG เชื้อเพลิง**" located immediately below the main table which summarizes 'LPG เพื่อใช้เป็นเชื้อเพลิง' and 'ปริมาณผลิตทั้งหมดของโรงแยกฯ'.
     * **Transformation**: Extract the decimal numeric value (e.g., 0.3244). Convert the extracted value to a JavaScript number type. This is a unitless ratio.
 
