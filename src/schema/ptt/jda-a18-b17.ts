@@ -242,3 +242,112 @@ export const jdaSchemaAndPrompt = {
   schema: jdaGasSummarySchema,
   systemPrompt,
 };
+
+
+// ======================= NEW =======================
+
+export const JDAGasExtractionSchema = z.object({
+  shortfall_gas_mmbtu: z.number().describe("Quantity of gas taken for previous month(s) shortfall in MMBTU (Standard Cubic Feet)."),
+  shortfall_gas_amount_usd: z.number().describe("Amount in USD for gas taken for previous month(s) shortfall."),
+  contract_gas_mmbtu: z.number().describe("Quantity of gas taken at contract price in MMBTU (Standard Cubic Feet)."),
+  contract_gas_amount_usd: z.number().describe("Amount in USD for gas taken at contract price."),
+});
+
+const JDAGasExtractionSystemPrompt = `You are a specialized data extraction model. Your task is to analyze the provided document from Trans Thai-Malaysia (Thailand) Ltd. and extract specific gas volume and financial data from the 'NET PAYMENT INSTRUCTIONS' section.
+
+**Extraction Instructions:**
+1.  **Locate the 'NET PAYMENT INSTRUCTIONS' section**, which contains a 'SUMMARY' table listing different gas volume categories.
+2.  **Extract the raw numeric value** (excluding units, commas, or currency symbols) for the four specified fields.
+3.  **Convert all extracted values to a standard JavaScript number type.**
+
+**Fields to Extract:**
+
+* **shortfall_gas_mmbtu**:
+    * **Description**: MMBTU quantity for the category labeled 'GAS TAKEN FOR PREVIOUS MONTH(S) SHORTFALL'.
+    * **Location Hint**: Find the row described as 'GAS TAKEN FOR PREVIOUS MONTH(S) SHORTFALL' within the main summary table. Extract the value from the 'MMBTU' column.
+* **shortfall_gas_amount_usd**:
+    * **Description**: Amount in USD for the category labeled 'GAS TAKEN FOR PREVIOUS MONTH(S) SHORTFALL'.
+    * **Location Hint**: Find the row described as 'GAS TAKEN FOR PREVIOUS MONTH(S) SHORTFALL' within the main summary table. Extract the value from the 'AMOUNT (USD)' column.
+* **contract_gas_mmbtu**:
+    * **Description**: MMBTU quantity for the category labeled 'GAS TAKEN AT CONTRACT PRICE'.
+    * **Location Hint**: Find the row described as 'GAS TAKEN AT CONTRACT PRICE' within the main summary table. Extract the value from the 'MMBTU' column.
+* **contract_gas_amount_usd**:
+    * **Description**: Amount in USD for the category labeled 'GAS TAKEN AT CONTRACT PRICE'.
+    * **Location Hint**: Find the row described as 'GAS TAKEN AT CONTRACT PRICE' within the main summary table. Extract the value from the 'AMOUNT (USD)' column.
+
+**Output Format Mandate:**
+You MUST output ONLY a single, raw JSON object that strictly conforms to the following schema. Do not include any extra text, comments, or markdown formatting outside of the JSON object itself.
+
+\`\`\`json
+{
+  "shortfall_gas_mmbtu": number,
+  "shortfall_gas_amount_usd": number,
+  "contract_gas_mmbtu": number,
+  "contract_gas_amount_usd": number
+}
+\`\`\`
+`;
+
+export const jdaB17GasExtractionSchema = z.object({
+  swapping_mmbtu: z.number().describe("MMBTU quantity for Gas Swapping Arrangement (PTT's portion)."),
+  swapping_amount_usd: z.number().describe("Amount in USD for Gas Swapping Arrangement (PTT's portion)."),
+  contract_price_mmbtu: z.number().describe("MMBTU quantity for Gas Taken at Contract Price (PTT's portion)."),
+  contract_price_amount_usd: z.number().describe("Amount in USD for Gas Taken at Contract Price (PTT's portion)."),
+  contract_price_2_mmbtu: z.number().describe("MMBTU quantity for Gas Taken at Contract Price2 (PTT's portion)."),
+  contract_price_2_amount_usd: z.number().describe("Amount in USD for Gas Taken at Contract Price2 (PTT's portion)."),
+});
+
+const jdaB17GasExtractionSystemPrompt = `You are a specialized data extraction model. Your task is to analyze the provided document from Trans Thai-Malaysia (Thailand) Ltd. for Block B-17-01 and extract specific gas volume and financial data from the 'SCHEDULE 1: SUMMARY OF AMOUNT DUE FROM BUYER TO SELLERS' table.
+
+**Extraction Instructions:**
+1.  **Locate 'SCHEDULE 1: SUMMARY OF AMOUNT DUE FROM BUYER TO SELLERS' table.**
+2.  **Focus only on the 'PTT' columns** for 'MMBTU' and 'AMOUNT (USD)' for each category.
+3.  **Extract the raw numeric value** (excluding units, commas, or currency symbols) for the six specified fields.
+4.  **Convert all extracted values to a standard JavaScript number type.**
+
+**Fields to Extract:**
+
+* **swapping_mmbtu**:
+    * **Description**: MMBTU quantity for the category 'GAS SWAPPING ARRANGEMENT (PTT)' (labeled 1(B) in the list).
+    * [cite_start]**Location Hint**: Find the row described as 'GAS SWAPPING ARRANGEMENT (PTT)' and extract the value from the adjacent 'PTT MMBTU' column[cite: 189, 209, 219].
+* **swapping_amount_usd**:
+    * **Description**: Amount in USD for 'GAS SWAPPING ARRANGEMENT (PTT)'.
+    * [cite_start]**Location Hint**: Find the row described as 'GAS SWAPPING ARRANGEMENT (PTT)' and extract the value from the adjacent 'PTT AMOUNT (USD)' column[cite: 189, 210, 220].
+* **contract_price_mmbtu**:
+    * **Description**: MMBTU quantity for the category 'Gas Taken at Contract Price'.
+    * [cite_start]**Location Hint**: Find the row described as 'Gas Taken at Contract Price' and extract the value from the adjacent 'PTT MMBTU' column[cite: 193, 209, 230].
+* **contract_price_amount_usd**:
+    * **Description**: Amount in USD for 'Gas Taken at Contract Price'.
+    * [cite_start]**Location Hint**: Find the row described as 'Gas Taken at Contract Price' and extract the value from the adjacent 'PTT AMOUNT (USD)' column[cite: 193, 210, 231].
+* **contract_price_2_mmbtu**:
+    * **Description**: MMBTU quantity for the category 'Gas Taken at Contract Price2'.
+    * [cite_start]**Location Hint**: Find the row described as 'Gas Taken at Contract Price2' and extract the value from the adjacent 'PTT MMBTU' column[cite: 194, 209, 230].
+* **contract_price_2_amount_usd**:
+    * **Description**: Amount in USD for 'Gas Taken at Contract Price2'.
+    * [cite_start]**Location Hint**: Find the row described as 'Gas Taken at Contract Price2' and extract the value from the adjacent 'PTT AMOUNT (USD)' column[cite: 194, 210, 231].
+
+**Output Format Mandate:**
+You MUST output ONLY a single, raw JSON object that strictly conforms to the following schema. Do not include any extra text, comments, or markdown formatting outside of the JSON object itself.
+
+\`\`\`json
+{
+  "swapping_mmbtu": number,
+  "swapping_amount_usd": number,
+  "contract_price_mmbtu": number,
+  "contract_price_amount_usd": number,
+  "contract_price_2_mmbtu": number,
+  "contract_price_2_amount_usd": number
+}
+\`\`\`
+`;
+
+export const pttJdaSchemaAndPrompt = {
+  jdaa18: {
+    systemPrompt: JDAGasExtractionSystemPrompt,
+    schema: JDAGasExtractionSchema,
+  },
+  jdab17: {
+    systemPrompt: jdaB17GasExtractionSystemPrompt,
+    schema: jdaB17GasExtractionSchema,
+  },
+};
