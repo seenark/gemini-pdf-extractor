@@ -368,6 +368,19 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
               arthitGasPlatformSchemaAndPrompt.statement.schema
             )
           ),
+          Effect.andThen((results) => {
+            let total_mmbtu = 0
+            let total_thb = 0
+            for (const item of results) {
+              total_mmbtu += item.quantity_mmbtu
+              total_thb += item.amount_thb
+            }
+            return {
+              results,
+              total_mmbtu,
+              total_thb,
+            }
+          }),
           Effect.tap((data) => Effect.log("data", data)),
           Effect.tapError((error) => Effect.logError("error -->", error.error)),
           Effect.catchTag("ExtractPDF/Process/Error", (error) =>
