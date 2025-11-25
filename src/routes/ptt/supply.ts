@@ -8,6 +8,7 @@ import { elysiaPdf } from "../../helpers";
 import { Runtime } from "../../runtime";
 import { arthitGasPlatformSchemaAndPrompt } from "../../schema/ptt/arthit";
 import { B8InvoiceAndHeatSchemaAndSystemPrompt } from "../../schema/ptt/b8-invoice-and-heat";
+import { pttC5SchemaandPromt } from "../../schema/ptt/c5-g448";
 import { invoiceAndHeatSchemaAndPrompt } from "../../schema/ptt/invoice-register-and-heat";
 import {
   jdaSchemaAndPrompt,
@@ -432,7 +433,8 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
             results,
             total_scf: results.contract_gas_mmbtu + results.shortfall_gas_mmbtu,
             total_usd:
-              results.contract_gas_amount_usd + results.shortfall_gas_amount_usd,
+              results.contract_gas_amount_usd +
+              results.shortfall_gas_amount_usd,
           })),
           Effect.tap((data) => Effect.log("data", data)),
           Effect.tapError((error) => Effect.logError("error -->", error.error)),
@@ -480,10 +482,59 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
           ),
           Effect.andThen((results) => ({
             results,
-            total_mmbtu: results.contract_price_2_mmbtu + results.contract_price_mmbtu + results.swapping_mmbtu,
+            total_mmbtu:
+              results.contract_price_2_mmbtu +
+              results.contract_price_mmbtu +
+              results.swapping_mmbtu,
             total_usd:
-              results.contract_price_2_amount_usd + results.contract_price_amount_usd + results.swapping_amount_usd,
+              results.contract_price_2_amount_usd +
+              results.contract_price_amount_usd +
+              results.swapping_amount_usd,
           })),
+          Effect.tap((data) => Effect.log("data", data)),
+          Effect.tapError((error) => Effect.logError("error -->", error.error)),
+          Effect.catchTag("ExtractPDF/Process/Error", (error) =>
+            Effect.succeed(
+              Response.json(
+                {
+                  message: error.message,
+                  error: error.error,
+                  status: "500",
+                },
+                {
+                  status: 500,
+                }
+              )
+            )
+          )
+        );
+
+        const result = await Runtime.runPromise(program);
+        return result;
+      },
+      {
+        body: t.Object({
+          file: elysiaPdf,
+        }),
+        tags: ["PTT"],
+      }
+    )
+    .post(
+      "/c5",
+      async ({ body }) => {
+        const arrBuf = await body.file.arrayBuffer();
+        const buf = Buffer.from(arrBuf);
+
+        const program = Effect.all({
+          svc: ExtractPDFService,
+        }).pipe(
+          Effect.andThen(({ svc }) =>
+            svc.processInline(
+              buf,
+              pttC5SchemaandPromt.g448.systemPrompt,
+              pttC5SchemaandPromt.g448.schema
+            )
+          ),
           Effect.tap((data) => Effect.log("data", data)),
           Effect.tapError((error) => Effect.logError("error -->", error.error)),
           Effect.catchTag("ExtractPDF/Process/Error", (error) =>
