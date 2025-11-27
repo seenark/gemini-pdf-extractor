@@ -29,6 +29,12 @@ app
   .use(
     openapi({
       path: "/docs",
+      documentation: {
+        info: {
+          title: "PDF Extractor",
+          version: "1.0.0",
+        },
+      },
     })
   )
   .get("/health", () => "Ok")
