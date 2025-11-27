@@ -23,6 +23,7 @@ export const lpgRoutes = new Elysia().group("/lpg", (c) =>
             pttLpgSchemaAndPrompt.fuelRatio.schema
           )
         ),
+        Effect.andThen((d) => d),
         Runtime.runPromise
       );
 

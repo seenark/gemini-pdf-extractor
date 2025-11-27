@@ -10,7 +10,7 @@ export const LNGCargoSchemaFlat = z.object({
   payment_due_date: z
     .string()
     .describe(
-      "Payment Due / Due Date / Payment Terms / กำหนดชำระเงิน / วันครบกำหนดชำระ; ควรเป็นรูปแบบวันที่ ISO (YYYY-MM-DD) หากทราบ มิฉะนั้นส่งสตริงที่พบ"
+      "Payment Due / Due Date / Payment Terms / กำหนดชำระเงิน / วันครบกำหนดชำระ; ส่งวันที่ตามที่พบในเอกสารต้นฉบับโดยไม่ต้องแปลงเป็น ISO"
     ),
   vessel_name: z
     .string()
@@ -109,7 +109,7 @@ export const LNGCargoSchemaFlat = z.object({
   closing_date: z
     .string()
     .describe(
-      "Closing Date / End of Unloading Date / วันที่สิ้นสุดการขนถ่ายสินค้า; ในภาพคือวันที่ที่ถูกไฮไลต์ด้วยพื้นหลังสีเหลือง ควรเป็นรูปแบบวันที่ ISO (YYYY-MM-DD) หากทราบ มิฉะนั้นส่งสตริงที่พบ"
+      "Closing Date / End of Unloading Date / วันที่สิ้นสุดการขนถ่ายสินค้า; ส่งวันที่ตามที่พบในเอกสารต้นฉบับโดยไม่ต้องแปลงเป็น ISO"
     ),
   total_tax_amount: z
     .number()
@@ -127,16 +127,16 @@ You are a specialized data extraction assistant for LNG cargo shipping documents
 ## EXTRACTION RULES:
 1) Language: Handle Thai (ภาษาไทย) and English. Do not translate values; capture as shown.
 2) Numbers: Remove commas and units; extract numeric values only.
-3) Dates: Prefer ISO YYYY-MM-DD; if ambiguous, return the raw date string.
+3) Dates: **Extract dates EXACTLY as they appear in the source document. Do NOT attempt to convert to ISO (YYYY-MM-DD) format.**
 4) Currency: Keep numeric values separate from currency symbols.
 5) **NO CALCULATION: Do NOT perform any arithmetic or calculation for any field. Only extract values directly displayed in the document.**
 6) **DATA SOURCE INTEGRITY: For all fields, the model MUST strictly use the numeric value explicitly and clearly displayed in the document.**
 
 ---
 ## FIELD-SPECIFIC INSTRUCTIONS:
-- voyage_seller_name: Company selling LNG (labels may include Seller/Supplier/ผู้ขาย/ผู้จำหน่าย/คู่สัญญา).
-- voyage_payment_due_date: Payment due/due date/กำหนดชำระ.
-- voyage_vessel_name: Vessel/Ship/ชื่อเรือ.
+- seller_name: Company selling LNG (labels may include Seller/Supplier/ผู้ขาย/ผู้จำหน่าย/คู่สัญญา).
+- payment_due_date: Payment due/due date/กำหนดชำระ. **Extract date in the format seen (e.g., "20-Aug-25").**
+- vessel_name: Vessel/Ship/ชื่อเรือ.
 - voyage_load_port: Loading Port/Port of Loading/ท่าเรือต้นทาง.
 - voyage_quantity_mmbtu: Energy quantity in MMBTU (MMBtu, million BTU, etc.). Extract the MMBTU figure.
 - voyage_price_usd_per_mmbtu: Unit Price USD/MMBTU.
@@ -151,9 +151,9 @@ You are a specialized data extraction assistant for LNG cargo shipping documents
 
 - exchange_rate_usd_to_thb: Extract FX rate as the numeric THB per 1 USD. If multiple rates exist, prefer the BOT announced selling rate on unloading/settlement date.
 
-- closing_date: Extract the 'TO' date from the 'DATE FROM TO' range, which represents the End of Unloading/Closing Date.
+- closing_date: Extract the 'TO' date from the 'DATE FROM TO' range, which represents the End of Unloading/Closing Date. **Extract date in the format seen in the document (e.g., "05-Aug-2025").**
 
-- **total_tax_amount**: Extract the **Total Taxable Amount** (ยอดรวมฐานภาษี) from the row labeled **'Total Taxable Amount'** in the summary table. **The expected value is 34,181.13.**
+- **total_tax_amount**: Extract the **Total Taxable Amount** (ยอดรวมฐานภาษี) from the row labeled **'Total Taxable Amount'** in the summary table.
 
 CUSTOMS CLEARANCE SERVICES (ARRAY) - CRITICAL RULES:
 ⚠️ ONLY extract FINAL TOTAL lines (e.g., "รวมทั้งสิ้น", "Total", "Grand Total", "Net Total").
