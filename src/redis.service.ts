@@ -100,6 +100,10 @@ export class RedisService extends Effect.Service<RedisService>()(
           Effect.gen(function* () {
             const key = hashFile(file);
             const cacheValue = yield* get<A>(key);
+
+            const cacheHit = Option.isSome(cacheValue);
+            yield* Effect.logInfo("cache hit", cacheHit);
+
             if (Option.isSome(cacheValue)) {
               return cacheValue.value;
             }
