@@ -22,7 +22,7 @@ export class RedisService extends Effect.Service<RedisService>()(
       const redisClient = yield* Effect.tryPromise({
         try: async () =>
           createClient({
-            url: process.env.USE_CACHE,
+            url: process.env.REDIS_URL,
           }),
         catch: (error) =>
           new RedisCreateClientError({
