@@ -5,11 +5,12 @@ import { elysiaPdf } from "../../helpers";
 import { RedisService } from "../../redis.service";
 import { Runtime } from "../../runtime";
 import { pttTotalDemandGulfSchemaAndPrompt } from "../../schema/ptt/invoice-total-demand-gulf";
+import { queryModel, shouldCache } from "../../utils/verify-caching";
 
 export const invoiceRoutes = new Elysia().group("/invoice", (c) =>
   c.post(
     "/total-demand-gulf",
-    async ({ body }) => {
+    async ({ body, query }) => {
       const file = body.file;
       const arrBuf = await file.arrayBuffer();
       const buf = Buffer.from(arrBuf);
@@ -24,14 +25,17 @@ export const invoiceRoutes = new Elysia().group("/invoice", (c) =>
             expiresIn: Duration.minutes(1),
           })
         ),
-        Effect.andThen(({ svc, cacheFn }) =>
-          cacheFn(
-            svc.processInline(
-              buf,
-              pttTotalDemandGulfSchemaAndPrompt.totalDemandGulf.systemPrompt,
-              pttTotalDemandGulfSchemaAndPrompt.totalDemandGulf.schema
-            )
+        Effect.andThen(({ svc, cacheFn }) => {
+          const program = svc.processInline(
+            buf,
+            pttTotalDemandGulfSchemaAndPrompt.totalDemandGulf.systemPrompt,
+            pttTotalDemandGulfSchemaAndPrompt.totalDemandGulf.schema
           )
+          if (shouldCache(query)) {
+            return cacheFn(program)
+          }
+          return program
+        }
         ),
         Effect.andThen((data) => ({
           ...data,
@@ -49,6 +53,7 @@ export const invoiceRoutes = new Elysia().group("/invoice", (c) =>
       body: t.Object({
         file: elysiaPdf,
       }),
+      query: queryModel,
       tags: ["PTT"],
     }
   )

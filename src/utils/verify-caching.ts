@@ -1,14 +1,17 @@
 import { t } from "elysia";
 
+const cacheQueryModel = t.Union([t.Literal("true"), t.Literal("false")], {
+    default: "true",
+})
+
+const cacheDurationModel = t.Number({ default: 60 }) // in seconds
+
 
 export const queryModel = t.Object({
-    cache: 
-        t.Union([t.Literal("true"), t.Literal("false")], {
-            default: "true",
-        }),
-    cacheDuration: t.Number({ default: 60 }), // in seconds
+    cache: cacheQueryModel,
+    cacheDuration: cacheDurationModel
 });
 
-export function shouldCache(query: { cache: string | undefined }) {
-  return query.cache === "true" || query.cache === undefined;
+export function shouldCache(query: { cache: "true" | "false" }) {
+    return query.cache === "true";
 }

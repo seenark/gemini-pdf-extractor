@@ -1,10 +1,11 @@
 /** biome-ignore-all lint/suspicious/noShadowRestrictedNames: <explanation> */
 /** biome-ignore-all lint/complexity/noExcessiveCognitiveComplexity: <explanation> */
 
-import { Array, Effect } from "effect";
+import { Array, Duration, Effect } from "effect";
 import Elysia, { t } from "elysia";
 import { ExtractPDFService } from "../../extract-pdf.service";
 import { elysiaPdf } from "../../helpers";
+import { RedisService } from "../../redis.service";
 import { Runtime } from "../../runtime";
 import { arthitGasPlatformSchemaAndPrompt } from "../../schema/ptt/arthit";
 import { B8InvoiceAndHeatSchemaAndSystemPrompt } from "../../schema/ptt/b8-invoice-and-heat";
@@ -15,12 +16,13 @@ import { pailinSchemaAndPrompt } from "../../schema/ptt/pailin";
 import { pttSupplySchemaAndPrompt as PttSupplySchemaAndPromptSouthern } from "../../schema/ptt/ptt-supply";
 import { pttSupplySchemaAndPrompt } from "../../schema/ptt/supply";
 import { supplyClassification } from "../../schema/ptt/supply.classification";
+import { queryModel, shouldCache } from "../../utils/verify-caching";
 
 export const supplyRoutes = new Elysia().group("/supply", (c) =>
   c
     .post(
       "/any-supply",
-      async ({ body }) => {
+      async ({ body, query }) => {
         const arrBuf = await body.file.arrayBuffer();
         const buf = Buffer.from(arrBuf);
 
@@ -67,7 +69,7 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
               buf,
               pttC5SchemaandPromt.g448.systemPrompt,
               pttC5SchemaandPromt.g448.schema
-            )
+            );
           }
 
           if (documentType === "ptt_supply" && confidence > 90) {
@@ -120,11 +122,12 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
           }
 
           if (documentType === "pailin" && confidence > 90) {
-            return yield* svc.processInline(
-              buf,
-              pailinSchemaAndPrompt.systemPrompt,
-              pailinSchemaAndPrompt.schema
-            )
+            return yield* svc
+              .processInline(
+                buf,
+                pailinSchemaAndPrompt.systemPrompt,
+                pailinSchemaAndPrompt.schema
+              )
               .pipe(
                 Effect.andThen((data) => {
                   const n = Array.flatMap(data.invoices, (d) =>
@@ -142,7 +145,9 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
                   };
                 }),
                 Effect.tap((data) => Effect.log("data", data)),
-                Effect.tapError((error) => Effect.logError("error -->", error.error)),
+                Effect.tapError((error) =>
+                  Effect.logError("error -->", error.error)
+                ),
                 Effect.catchTag("ExtractPDF/Process/Error", (error) =>
                   Effect.succeed(
                     Response.json(
@@ -225,39 +230,44 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
           }
 
           if (documentType === "jda_a18" && confidence > 90) {
-            return yield* svc.processInline(
-              buf,
-              pttJdaSchemaAndPrompt.jdaa18.systemPrompt,
-              pttJdaSchemaAndPrompt.jdaa18.schema
-            ).pipe(
-              Effect.andThen((results) => ({
-                results,
-                total_scf: results.contract_gas_mmbtu + results.shortfall_gas_mmbtu,
-                total_usd:
-                  results.contract_gas_amount_usd +
-                  results.shortfall_gas_amount_usd,
-              })),
+            return yield* svc
+              .processInline(
+                buf,
+                pttJdaSchemaAndPrompt.jdaa18.systemPrompt,
+                pttJdaSchemaAndPrompt.jdaa18.schema
             )
+              .pipe(
+                Effect.andThen((results) => ({
+                  results,
+                  total_scf:
+                    results.contract_gas_mmbtu + results.shortfall_gas_mmbtu,
+                  total_usd:
+                    results.contract_gas_amount_usd +
+                    results.shortfall_gas_amount_usd,
+                }))
+              );
           }
 
           if (documentType === "jda_b17" && confidence > 90) {
-            return yield* svc.processInline(
-              buf,
-              pttJdaSchemaAndPrompt.jdab17.systemPrompt,
-              pttJdaSchemaAndPrompt.jdab17.schema
-            ).pipe(
-              Effect.andThen((results) => ({
-                results,
-                total_mmbtu:
-                  results.contract_price_2_mmbtu +
-                  results.contract_price_mmbtu +
-                  results.swapping_mmbtu,
-                total_usd:
-                  results.contract_price_2_amount_usd +
-                  results.contract_price_amount_usd +
-                  results.swapping_amount_usd,
-              })),
+            return yield* svc
+              .processInline(
+                buf,
+                pttJdaSchemaAndPrompt.jdab17.systemPrompt,
+                pttJdaSchemaAndPrompt.jdab17.schema
             )
+              .pipe(
+                Effect.andThen((results) => ({
+                  results,
+                  total_mmbtu:
+                    results.contract_price_2_mmbtu +
+                    results.contract_price_mmbtu +
+                    results.swapping_mmbtu,
+                  total_usd:
+                    results.contract_price_2_amount_usd +
+                    results.contract_price_amount_usd +
+                    results.swapping_amount_usd,
+                }))
+              );
           }
 
           return yield* svc.processInline(
@@ -282,32 +292,60 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
           )
         );
 
-        return Runtime.runPromise(program);
+        return Effect.all({
+          redis: RedisService,
+        }).pipe(
+          Effect.let("cacheFn", ({ redis }) =>
+            redis.withCache({
+              file: buf,
+              expiresIn: Duration.seconds(query.cacheDuration),
+            })
+          ),
+          Effect.andThen(({ cacheFn }) => {
+            if (shouldCache(query)) {
+              return cacheFn(program);
+            }
+            return program;
+          }),
+          Runtime.runPromise
+        );
       },
       {
         body: t.Object({
           file: elysiaPdf,
         }),
+        query: queryModel,
         tags: ["PTT"],
       }
     )
     .post(
       "/invoice",
-      async ({ body }) => {
+      async ({ body, query }) => {
         const file = body.file;
         const arrBuf = await file.arrayBuffer();
         const buf = Buffer.from(arrBuf);
 
         const result = await Effect.all({
           svc: ExtractPDFService,
+          redis: RedisService,
         }).pipe(
-          Effect.andThen(({ svc }) =>
-            svc.processInline(
+          Effect.let("cacheFn", ({ redis }) =>
+            redis.withCache({
+              file: buf,
+              expiresIn: Duration.seconds(query.cacheDuration),
+            })
+          ),
+          Effect.andThen(({ svc, cacheFn }) => {
+            const program = svc.processInline(
               buf,
               pttSupplySchemaAndPrompt.invoice.systemPrompt,
               pttSupplySchemaAndPrompt.invoice.schema
-            )
-          ),
+            );
+            if (shouldCache(query)) {
+              return cacheFn(program);
+            }
+            return program;
+          }),
           Effect.andThen((data) => ({
             ...data,
             total_amount: Array.reduce(
@@ -341,25 +379,37 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
         body: t.Object({
           file: elysiaPdf,
         }),
+        query: queryModel,
         tags: ["PTT"],
       }
     )
     .post(
       "/invoice-and-heat",
-      async ({ body }) => {
+      async ({ body, query }) => {
         const arrBuf = await body.file.arrayBuffer();
         const buf = Buffer.from(arrBuf);
 
-        const program = Effect.all({
+        const result = Effect.all({
           svc: ExtractPDFService,
+          redis: RedisService,
         }).pipe(
-          Effect.andThen(({ svc }) =>
-            svc.processInline(
+          Effect.let("cacheFn", ({ redis }) =>
+            redis.withCache({
+              file: buf,
+              expiresIn: Duration.seconds(query.cacheDuration),
+            })
+          ),
+          Effect.andThen(({ svc, cacheFn }) => {
+            const program = svc.processInline(
               buf,
               invoiceAndHeatSchemaAndPrompt.systemPrompt,
               invoiceAndHeatSchemaAndPrompt.schema
-            )
-          ),
+            );
+            if (shouldCache(query)) {
+              return cacheFn(program);
+            }
+            return program;
+          }),
           Effect.andThen((data) => ({
             ...data,
             total_amount_exclude_vat: Array.reduce(
@@ -383,34 +433,47 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
                 }
               )
             )
-          )
+          ),
+          Runtime.runPromise
         );
 
-        return Runtime.runPromise(program);
+        return result;
       },
       {
         body: t.Object({
           file: elysiaPdf,
         }),
+        query: queryModel,
         tags: ["PTT"],
       }
     )
     .post(
       "/b8-invoice-and-heat",
-      async ({ body }) => {
+      async ({ body, query }) => {
         const arrBuf = await body.file.arrayBuffer();
         const buf = Buffer.from(arrBuf);
 
-        const program = Effect.all({
+        const result = Effect.all({
           svc: ExtractPDFService,
+          redis: RedisService,
         }).pipe(
-          Effect.andThen(({ svc }) =>
-            svc.processInline(
+          Effect.let("cacheFn", ({ redis }) =>
+            redis.withCache({
+              file: buf,
+              expiresIn: Duration.seconds(query.cacheDuration),
+            })
+          ),
+          Effect.andThen(({ svc, cacheFn }) => {
+            const program = svc.processInline(
               buf,
               B8InvoiceAndHeatSchemaAndSystemPrompt.prompt,
               B8InvoiceAndHeatSchemaAndSystemPrompt.schema
-            )
-          ),
+            );
+            if (shouldCache(query)) {
+              return cacheFn(program);
+            }
+            return program;
+          }),
           Effect.let("svcData", (data) => data),
           Effect.let("totalInvoiceAmount", ({ svcData }) => {
             const invoice = Array.flatMap(svcData.invoices, (inv) =>
@@ -437,35 +500,47 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
                 }
               )
             )
-          )
+          ),
+          Runtime.runPromise
         );
 
-        const result = await Runtime.runPromise(program);
         return result;
       },
       {
         body: t.Object({
           file: elysiaPdf,
         }),
+        query: queryModel,
         tags: ["PTT"],
       }
     )
     .post(
       "/arthit",
-      async ({ body }) => {
+      async ({ body, query }) => {
         const arrBuf = await body.file.arrayBuffer();
         const buf = Buffer.from(arrBuf);
 
-        const program = Effect.all({
+        const result = Effect.all({
           svc: ExtractPDFService,
+          redis: RedisService,
         }).pipe(
-          Effect.andThen(({ svc }) =>
-            svc.processInline(
+          Effect.let("cacheFn", ({ redis }) =>
+            redis.withCache({
+              file: buf,
+              expiresIn: Duration.seconds(query.cacheDuration),
+            })
+          ),
+          Effect.andThen(({ svc, cacheFn }) => {
+            const program = svc.processInline(
               buf,
               arthitGasPlatformSchemaAndPrompt.statement.systemPrompt,
               arthitGasPlatformSchemaAndPrompt.statement.schema
-            )
-          ),
+            );
+            if (shouldCache(query)) {
+              return cacheFn(program);
+            }
+            return program;
+          }),
           Effect.andThen((results) => {
             let total_mmbtu = 0;
             let total_thb = 0;
@@ -494,35 +569,47 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
                 }
               )
             )
-          )
+          ),
+          Runtime.runPromise
         );
 
-        const result = await Runtime.runPromise(program);
         return result;
       },
       {
         body: t.Object({
           file: elysiaPdf,
         }),
+        query: queryModel,
         tags: ["PTT"],
       }
     )
     .post(
       "/jda-a18",
-      async ({ body }) => {
+      async ({ body, query }) => {
         const arrBuf = await body.file.arrayBuffer();
         const buf = Buffer.from(arrBuf);
 
-        const program = Effect.all({
+        const result = Effect.all({
           svc: ExtractPDFService,
+          redis: RedisService,
         }).pipe(
-          Effect.andThen(({ svc }) =>
-            svc.processInline(
+          Effect.let("cacheFn", ({ redis }) =>
+            redis.withCache({
+              file: buf,
+              expiresIn: Duration.seconds(query.cacheDuration),
+            })
+          ),
+          Effect.andThen(({ svc, cacheFn }) => {
+            const program = svc.processInline(
               buf,
               pttJdaSchemaAndPrompt.jdaa18.systemPrompt,
               pttJdaSchemaAndPrompt.jdaa18.schema
-            )
-          ),
+            );
+            if (shouldCache(query)) {
+              return cacheFn(program);
+            }
+            return program;
+          }),
           Effect.andThen((results) => ({
             results,
             total_scf: results.contract_gas_mmbtu + results.shortfall_gas_mmbtu,
@@ -545,35 +632,47 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
                 }
               )
             )
-          )
+          ),
+          Runtime.runPromise
         );
 
-        const result = await Runtime.runPromise(program);
         return result;
       },
       {
         body: t.Object({
           file: elysiaPdf,
         }),
+        query: queryModel,
         tags: ["PTT"],
       }
     )
     .post(
       "/jda-b17",
-      async ({ body }) => {
+      async ({ body, query }) => {
         const arrBuf = await body.file.arrayBuffer();
         const buf = Buffer.from(arrBuf);
 
-        const program = Effect.all({
+        const result = Effect.all({
           svc: ExtractPDFService,
+          redis: RedisService,
         }).pipe(
-          Effect.andThen(({ svc }) =>
-            svc.processInline(
+          Effect.let("cacheFn", ({ redis }) =>
+            redis.withCache({
+              file: buf,
+              expiresIn: Duration.seconds(query.cacheDuration),
+            })
+          ),
+          Effect.andThen(({ svc, cacheFn }) => {
+            const program = svc.processInline(
               buf,
               pttJdaSchemaAndPrompt.jdab17.systemPrompt,
               pttJdaSchemaAndPrompt.jdab17.schema
-            )
-          ),
+            );
+            if (shouldCache(query)) {
+              return cacheFn(program);
+            }
+            return program;
+          }),
           Effect.andThen((results) => ({
             results,
             total_mmbtu:
@@ -600,35 +699,47 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
                 }
               )
             )
-          )
+          ),
+          Runtime.runPromise
         );
 
-        const result = await Runtime.runPromise(program);
         return result;
       },
       {
         body: t.Object({
           file: elysiaPdf,
         }),
+        query: queryModel,
         tags: ["PTT"],
       }
     )
     .post(
       "/c5",
-      async ({ body }) => {
+      async ({ body, query }) => {
         const arrBuf = await body.file.arrayBuffer();
         const buf = Buffer.from(arrBuf);
 
-        const program = Effect.all({
+        const result = Effect.all({
           svc: ExtractPDFService,
+          redis: RedisService,
         }).pipe(
-          Effect.andThen(({ svc }) =>
-            svc.processInline(
+          Effect.let("cacheFn", ({ redis }) =>
+            redis.withCache({
+              file: buf,
+              expiresIn: Duration.seconds(query.cacheDuration),
+            })
+          ),
+          Effect.andThen(({ svc, cacheFn }) => {
+            const program = svc.processInline(
               buf,
               pttC5SchemaandPromt.g448.systemPrompt,
               pttC5SchemaandPromt.g448.schema
-            )
-          ),
+            );
+            if (shouldCache(query)) {
+              return cacheFn(program);
+            }
+            return program;
+          }),
           Effect.tap((data) => Effect.log("data", data)),
           Effect.tapError((error) => Effect.logError("error -->", error.error)),
           Effect.catchTag("ExtractPDF/Process/Error", (error) =>
@@ -644,35 +755,47 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
                 }
               )
             )
-          )
+          ),
+          Runtime.runPromise
         );
 
-        const result = await Runtime.runPromise(program);
         return result;
       },
       {
         body: t.Object({
           file: elysiaPdf,
         }),
+        query: queryModel,
         tags: ["PTT"],
       }
     )
     .post(
       "/pailin",
-      async ({ body }) => {
+      async ({ body, query }) => {
         const arrBuf = await body.file.arrayBuffer();
         const buf = Buffer.from(arrBuf);
 
-        const program = Effect.all({
+        const result = Effect.all({
           svc: ExtractPDFService,
+          redis: RedisService,
         }).pipe(
-          Effect.andThen(({ svc }) =>
-            svc.processInline(
+          Effect.let("cacheFn", ({ redis }) =>
+            redis.withCache({
+              file: buf,
+              expiresIn: Duration.seconds(query.cacheDuration),
+            })
+          ),
+          Effect.andThen(({ svc, cacheFn }) => {
+            const program = svc.processInline(
               buf,
               pailinSchemaAndPrompt.systemPrompt,
               pailinSchemaAndPrompt.schema
-            )
-          ),
+            );
+            if (shouldCache(query)) {
+              return cacheFn(program);
+            }
+            return program;
+          }),
           Effect.andThen((data) => {
             const n = Array.flatMap(data.invoices, (d) =>
               Array.map(d.lineItems, (a) => a.amountExcludingVAT)
@@ -703,16 +826,17 @@ export const supplyRoutes = new Elysia().group("/supply", (c) =>
                 }
               )
             )
-          )
+          ),
+          Runtime.runPromise
         );
 
-        const result = await Runtime.runPromise(program);
         return result;
       },
       {
         body: t.Object({
           file: elysiaPdf,
         }),
+        query: queryModel,
         tags: ["PTT"],
       }
     )

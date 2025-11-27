@@ -23,9 +23,7 @@ export const inventoryRoutes = new Elysia().group("/inventory", (c) =>
           file: buf,
           expiresIn: Duration.seconds(query.cacheDuration)
         })),
-        Effect.andThen(({ svc, cacheFn }) =>
-
-        {
+        Effect.andThen(({ svc, cacheFn }) => {
           const program = svc.processInline(
             buf,
             pttInventorySchemaAndPrompt.terminalCost.systemPrompt,
