@@ -1,8 +1,4 @@
 {
-  // Global Editor Settings for Indentation
-  "editor.tabSize": 2,
-  "editor.insertSpaces": true,
-
   "editor.defaultFormatter": "esbenp.prettier-vscode",
   "[javascript]": {
     "editor.defaultFormatter": "biomejs.biome"
