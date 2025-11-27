@@ -18,7 +18,7 @@ function debugEnv() {
   const program = Effect.Do.pipe(
     Effect.tap(() => Effect.logDebug("env", process.env))
   );
-  Runtime.runSync(program);
+  Runtime.runPromise(program);
 }
 
 debugEnv();
