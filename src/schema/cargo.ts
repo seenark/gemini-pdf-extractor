@@ -104,7 +104,7 @@ export const LNGCargoSchemaFlat = z.object({
       })
     )
     .describe(
-      "Array of customs clearance FINAL TOTALS only (e.g., 'รวมทั้งสิ้น' lines). Do NOT include individual line items, breakdowns, or sub-amounts. Only extract the final aggregated total for each page or invoice section."
+      "Array of customs clearance FINAL TOTALS only. Extract ONLY from pages containing **'กรมศุลกากร'** or **'เลขที่ชำระอากร'** and **NOT** 'ภาษีสรรพสามิตและภาษีมูลค่าเพิ่ม'."
     ),
   closing_date: z
     .string()
@@ -156,6 +156,8 @@ You are a specialized data extraction assistant for LNG cargo shipping documents
 - **total_tax_amount**: Extract the **Total Taxable Amount** (ยอดรวมฐานภาษี) from the row labeled **'Total Taxable Amount'** in the summary table.
 
 CUSTOMS CLEARANCE SERVICES (ARRAY) - CRITICAL RULES:
+⚠️ **DATA SOURCE FILTER: ONLY consider documents/pages that contain the exact text "กรมศุลกากร" (Thai Customs Department) OR "เลขที่ชำระอากร" (Duty Payment Number).**
+⚠️ **EXCLUSION FILTER: IGNORE documents/pages that contain "ภาษีสรรพสามิตและภาษีมูลค่าเพิ่ม" (Excise Tax and VAT) or are clearly from non-customs entities (e.g., Schenker (Thai)).**
 ⚠️ ONLY extract FINAL TOTAL lines (e.g., "รวมทั้งสิ้น", "Total", "Grand Total", "Net Total").
 ⚠️ DO NOT extract individual line items, sub-amounts, or breakdowns.
 ⚠️ Look for the FINAL AGGREGATED SUM that represents the complete cost for that section/page.
